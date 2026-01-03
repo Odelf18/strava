@@ -1,21 +1,39 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# Add src to path to import stravavis
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "src"))
-
-from stravavis import (
-    plot_calendar,
-    plot_dumbbell,
-    plot_elevations,
-    plot_facets,
-    plot_landscape,
-    plot_map,
-)
-from stravavis.process_activities import process_activities
-from stravavis.process_data import process_data
+# Import stravavis - should be installed via pip install -e ../../src
+try:
+    from stravavis import (
+        plot_calendar,
+        plot_dumbbell,
+        plot_elevations,
+        plot_facets,
+        plot_landscape,
+        plot_map,
+    )
+    from stravavis.process_activities import process_activities
+    from stravavis.process_data import process_data
+except ImportError:
+    # Fallback: try to import from source
+    import sys
+    from pathlib import Path
+    
+    src_path = Path(__file__).parent.parent.parent.parent.parent / "src"
+    if src_path.exists():
+        sys.path.insert(0, str(src_path))
+        from stravavis import (
+            plot_calendar,
+            plot_dumbbell,
+            plot_elevations,
+            plot_facets,
+            plot_landscape,
+            plot_map,
+        )
+        from stravavis.process_activities import process_activities
+        from stravavis.process_data import process_data
+    else:
+        raise ImportError(
+            "stravavis not found. Please install it with: pip install -e ../../src"
+        )
 
 
 class VisualizationProcessor:

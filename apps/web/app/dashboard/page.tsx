@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState<number | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -27,8 +28,13 @@ export default function DashboardPage() {
     try {
       const response = await api.get("/api/jobs/")
       setJobs(response.data)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch jobs:", err)
+      if (err.response?.status === 401) {
+        // Token expired, redirect to login
+        localStorage.removeItem("token")
+        router.push("/auth/login")
+      }
     } finally {
       setLoading(false)
     }
@@ -37,6 +43,54 @@ export default function DashboardPage() {
   const handleLogout = () => {
     localStorage.removeItem("token")
     router.push("/")
+  }
+
+  const handleDownload = async (jobId: number) => {
+    try {
+      setDownloading(jobId)
+      const token = localStorage.getItem("token")
+      if (!token) {
+        alert("Please login again")
+        router.push("/auth/login")
+        return
+      }
+
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+      const response = await fetch(`${API_URL}/api/download/${jobId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("token")
+          router.push("/auth/login")
+          return
+        }
+        const errorText = await response.text()
+        throw new Error(errorText || "Download failed")
+      }
+
+      // Get the blob
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `strava-visualizations-${jobId}.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error: any) {
+      console.error("Download error:", error)
+      alert(error.message || "Failed to download file. Please try again.")
+    } finally {
+      setDownloading(null)
+    }
   }
 
   if (loading) {
@@ -89,13 +143,14 @@ export default function DashboardPage() {
                       )}
                     </div>
                     {job.status === "completed" && (
-                      <a
-                        href={`/api/download/${job.id}`}
-                        download
-                        className="text-blue-600 hover:underline"
+                      <Button
+                        onClick={() => handleDownload(job.id)}
+                        variant="outline"
+                        size="sm"
+                        disabled={downloading === job.id}
                       >
-                        Download Results
-                      </a>
+                        {downloading === job.id ? "Downloading..." : "Download Results"}
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -107,4 +162,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-

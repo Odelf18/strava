@@ -32,8 +32,8 @@ export default function UploadPage() {
         },
       })
 
-      setJobId(response.data.job_id)
-      router.push(`/configure/${response.data.job_id}`)
+      const jobId = response.data.job_id
+      router.push(`/configure/${jobId}`)
     } catch (err: any) {
       alert(err.response?.data?.detail || "Upload failed")
     } finally {

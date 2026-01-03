@@ -15,9 +15,8 @@ from app.services.storage import StorageManager
 from app.workers.celery_app import celery_app
 
 
-@celery_app.task(bind=True, max_retries=3)
-def process_visualization_job(self, job_id: int) -> None:
-    """Process a visualization job."""
+def _process_job(job_id: int) -> None:
+    """Internal function to process a visualization job."""
     db = SessionLocal()
     job = None
     
@@ -112,7 +111,22 @@ def process_visualization_job(self, job_id: int) -> None:
             job.status = JobStatus.FAILED.value
             job.error_message = str(e)
             db.commit()
-        raise self.retry(exc=e, countdown=60)
+        raise
     finally:
         db.close()
 
+
+# Function that can be called directly (for testing without Celery)
+def process_visualization_job(job_id: int) -> None:
+    """Process a visualization job (can be called directly)."""
+    _process_job(job_id)
+
+
+# Celery task - must be registered with the correct name
+@celery_app.task(bind=True, max_retries=3)
+def process_visualization_job_task(self, job_id: int) -> None:
+    """Celery task wrapper for process_visualization_job."""
+    try:
+        _process_job(job_id)
+    except Exception as e:
+        raise self.retry(exc=e, countdown=60)

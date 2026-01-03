@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
+# Use bcrypt for password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -33,6 +34,13 @@ def decode_access_token(token: str) -> dict | None:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
-    except JWTError:
+    except JWTError as e:
+        # Log the error for debugging
+        if settings.DEBUG:
+            print(f"JWT decode error: {e}")
+        return None
+    except Exception as e:
+        if settings.DEBUG:
+            print(f"Token decode error: {e}")
         return None
 

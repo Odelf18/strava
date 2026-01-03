@@ -139,8 +139,8 @@ async def stripe_webhook(request: Request):
                 db.commit()
                 
                 # Trigger Celery task
-                from app.workers.visualization_job import process_visualization_job
-                process_visualization_job.delay(job_id)
+                from app.workers.visualization_job import process_visualization_job_task
+                process_visualization_job_task.delay(job_id)
         finally:
             db.close()
     

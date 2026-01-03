@@ -4,10 +4,20 @@ FastAPI backend for the Strava visualization SaaS platform.
 
 ## Setup
 
-1. Install dependencies:
+1. **First, install stravavis from the root directory:**
 ```bash
+# From the root of the project (strava_py/)
+cd ../..
 pip install -e .
 ```
+
+2. **Then install API dependencies:**
+```bash
+# From apps/api/
+pip install -r requirements.txt
+```
+
+Or see `INSTALL.md` for detailed instructions.
 
 2. Copy `.env.example` to `.env` and configure:
 ```bash
@@ -30,6 +40,14 @@ uvicorn app.main:app --reload
 ```
 
 6. Start Celery worker (in separate terminal):
+
+**Windows:**
+```bash
+python -m celery -A app.workers.celery_app worker --loglevel=info
+```
+Ou utilisez le script : `start_celery.bat`
+
+**Mac/Linux:**
 ```bash
 celery -A app.workers.celery_app worker --loglevel=info
 ```

@@ -22,15 +22,38 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if not token:
+        if settings.DEBUG:
+            print("No token provided")
+        raise credentials_exception
+    
     payload = decode_access_token(token)
     if payload is None:
+        if settings.DEBUG:
+            print(f"Failed to decode token: {token[:20] if token else 'None'}...")
         raise credentials_exception
-    user_id: int = payload.get("sub")
+    
+    user_id = payload.get("sub")
     if user_id is None:
+        if settings.DEBUG:
+            print(f"No 'sub' in payload: {payload}")
         raise credentials_exception
+    
+    # user_id is already a string from JWT payload, convert to int
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        if settings.DEBUG:
+            print(f"Invalid user_id type: {type(user_id)}, value: {user_id}")
+        raise credentials_exception
+    
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
+        if settings.DEBUG:
+            print(f"User not found with id: {user_id}")
         raise credentials_exception
+    
     return user
 
 
@@ -65,7 +88,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         )
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data={"sub": user.id}, expires_delta=access_token_expires)
+    # JWT 'sub' must be a string, not an integer
+    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 
 

@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # App
     APP_NAME: str = "Strava Visualization SaaS"
-    DEBUG: bool = False
+    DEBUG: bool = True  # Set to True for development
     
     # Database
     DATABASE_URL: str = "sqlite:///./strava_saas.db"
@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     OUTPUT_DIR: str = "./temp/outputs"
     FILE_RETENTION_HOURS: int = 24
     
-    # Redis
+    # Redis - Use environment variable or default
+    # For Windows: try redis://localhost:6379/0 or use Upstash cloud Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
     # Celery
@@ -46,4 +47,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
