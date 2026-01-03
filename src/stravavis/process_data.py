@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import math
 import tempfile
+import xml.etree.ElementTree as ET
+from datetime import datetime
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -17,6 +19,8 @@ def process_file(fpath: str) -> pd.DataFrame | None:
         df = process_gpx(fpath)
     elif fpath.endswith(".fit"):
         df = process_fit(fpath)
+    elif fpath.endswith(".tcx"):
+        df = process_tcx(fpath)
     else:
         return None
 
@@ -114,6 +118,83 @@ def process_fit(fitfile: str) -> pd.DataFrame:
     )
 
     return df
+
+
+# Function for processing an individual TCX file
+def process_tcx(tcxfile: str) -> pd.DataFrame | None:
+    try:
+        tree = ET.parse(tcxfile)
+        root = tree.getroot()
+        
+        # TCX namespace
+        ns = {"tcx": "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"}
+        
+        lon = []
+        lat = []
+        ele = []
+        time = []
+        name = []
+        dist = []
+        
+        # Find all trackpoints
+        for trackpoint in root.findall(".//tcx:Trackpoint", ns):
+            # Get position
+            position = trackpoint.find("tcx:Position", ns)
+            if position is None:
+                continue
+            
+            lat_elem = position.find("tcx:LatitudeDegrees", ns)
+            lon_elem = position.find("tcx:LongitudeDegrees", ns)
+            
+            if lat_elem is None or lon_elem is None:
+                continue
+            
+            x = float(lon_elem.text)
+            y = float(lat_elem.text)
+            
+            # Get elevation
+            ele_elem = trackpoint.find("tcx:AltitudeMeters", ns)
+            z = float(ele_elem.text) if ele_elem is not None and ele_elem.text else 0.0
+            
+            # Get time
+            time_elem = trackpoint.find("tcx:Time", ns)
+            if time_elem is None or time_elem.text is None:
+                continue
+            t = datetime.fromisoformat(time_elem.text.replace("Z", "+00:00"))
+            
+            lon.append(x)
+            lat.append(y)
+            ele.append(z)
+            time.append(t)
+            name.append(tcxfile)
+        
+        if not lon:
+            return None
+        
+        # Calculate distance
+        x0 = lon[0]
+        y0 = lat[0]
+        d0 = 0
+        dist = [d0]
+        
+        for i in range(1, len(lon)):
+            x = lon[i]
+            y = lat[i]
+            d = d0 + math.sqrt(math.pow(x - x0, 2) + math.pow(y - y0, 2))
+            dist.append(d)
+            x0 = x
+            y0 = y
+            d0 = d
+        
+        df = pd.DataFrame(
+            list(zip(lon, lat, ele, time, name, dist)),
+            columns=["lon", "lat", "ele", "time", "name", "dist"],
+        )
+        
+        return df
+    except Exception as e:
+        print(f"\nSkipping {tcxfile}: {type(e).__name__}: {e}")
+        return None
 
 
 def load_cache(filenames: list[str]) -> tuple[Path, pd.DataFrame | None]:

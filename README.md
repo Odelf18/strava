@@ -1,188 +1,131 @@
-# strava_py
+# Strava Visualization SaaS
 
-Create artistic visualisations with your exercise data (Python version).
+A modern SaaS platform for creating artistic visualizations from Strava data.
 
-This is a port of the [R strava package](https://github.com/marcusvolz/strava) to
-Python.
+## Features
 
-## Installation
+- 🎨 **Multiple Visualization Types**: Maps, calendars, elevation profiles, facets, landscape, dumbbell plots
+- 🚴 **Multi-Sport Support**: Works with all Strava activities (cycling, running, swimming, etc.)
+- 🔍 **Advanced Filtering**: Filter by sport type, date range, geographic bounds, or specific activities
+- 💳 **Stripe Integration**: Multiple pricing tiers with secure payment processing
+- ⚡ **Async Processing**: Background job processing with Celery
+- 📦 **Easy Upload**: Simply upload your Strava export ZIP file
 
-Install via pip:
+## Architecture
 
-```sh
-python3 -m pip install stravavis
+This is a monorepo containing:
+
+- **apps/api**: FastAPI backend with Celery workers
+- **apps/web**: Next.js frontend with shadcn/ui
+- **src/stravavis**: Core visualization library (enhanced with TCX support)
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- Redis (for Celery)
+- PostgreSQL (for production) or SQLite (for development)
+
+### Backend Setup
+
+1. Navigate to `apps/api`:
+```bash
+cd apps/api
 ```
 
-For development:
-
-```sh
-git clone https://github.com/marcusvolz/strava_py
-cd strava_py
+2. Install dependencies:
+```bash
 pip install -e .
 ```
 
-Then run from the terminal:
-
-```sh
-stravavis --help
+3. Setup environment:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-## How to use
-
-If your activity data is in a folder called `activities`, run the following command:
-
-```sh
-stravavis activities
+4. Start Redis:
+```bash
+redis-server
 ```
 
-By default, this will create output images prefixed `strava-`.
-
-If you have an `activities.csv` file:
-
-```sh
-stravavis activities --activities_path activities.csv
+5. Start the API:
+```bash
+python run.py
 ```
 
-To only map activities contained within a
-[bounding box](https://boundingbox.klokantech.com/):
-
-```sh
-stravavis activities --bbox 24.782802,59.922486,25.254511,60.29785
+6. Start Celery worker (in separate terminal):
+```bash
+celery -A app.workers.celery_app worker --loglevel=info
 ```
 
-Or as a shortcut, save bounding-box coordinates to a file:
+### Frontend Setup
 
-```sh
-echo 24.782802,59.922486,25.254511,60.29785 > helsinki.bbox
-stravavis activities --bbox helsinki.bbox
+1. Navigate to `apps/web`:
+```bash
+cd apps/web
 ```
 
-To only plot certain visualisations:
-
-```sh
-stravavis activities --plot map facets landscape
+2. Install dependencies:
+```bash
+npm install
 ```
 
-## Examples
-
-### Facets
-
-A plot of activities as small multiples. The concept behind this plot was originally
-inspired by [Sisu](https://twitter.com/madewithsisu).
-
-![facets](https://raw.githubusercontent.com/marcusvolz/strava_py/main/plots/facets001.png "Facets, showing activity outlines")
-
-### Map
-
-A map of activities viewed in plan.
-
-![map](https://raw.githubusercontent.com/marcusvolz/strava_py/main/plots/map001.png "A map of activities viewed in plan")
-
-### Elevations
-
-A plot of activity elevation profiles as small multiples.
-
-![map](https://raw.githubusercontent.com/marcusvolz/strava_py/main/plots/elevations001.png "A plot of activity elevation profiles as small multiples")
-
-### Landscape
-
-Elevation profiles superimposed.
-
-![map](https://raw.githubusercontent.com/marcusvolz/strava_py/main/plots/landscape001.png "Elevation profiles superimposed")
-
-### Calendar
-
-Calendar heatmap showing daily activity distance, using the
-[calmap](https://pythonhosted.org/calmap/) package. Requires "activities.csv" from the
-bulk Strava export.
-
-![map](https://raw.githubusercontent.com/marcusvolz/strava_py/main/plots/calendar001.png "Calendar heatmap")
-
-### Dumbbell plot
-
-Activities shown as horizontal lines by time of day and day of year, facetted by year.
-Requires "activities.csv" from the bulk Strava export.
-
-![map](https://raw.githubusercontent.com/marcusvolz/strava_py/main/plots/dumbbell001.png "Dumbbell plot")
-
-## Bulk export from Strava
-
-The process for downloading data is described on the Strava website here:
-[https://support.strava.com/hc/en-us/articles/216918437-Exporting-your-Data-and-Bulk-Export#Bulk],
-but in essence, do the following:
-
-1. Log in to [Strava](https://www.strava.com/)
-2. Select "[Settings](https://www.strava.com/settings/profile)" from the main drop-down
-   menu at top right of the screen
-3. Select "[My Account](https://www.strava.com/account)" from the navigation menu to the
-   left of the screen.
-4. Under the
-   "[Download or Delete Your Account](https://www.strava.com/athlete/delete_your_account)"
-   heading, click the "Get Started" button.
-5. Under the "Download Request", heading, click the "Request Your Archive" button.
-   **_Don't click anything else on that page, i.e. particularly not the "Request Account
-   Deletion" button._**
-6. Wait for an email to be sent
-7. Click the link in email to download zipped folder containing activities
-8. Unzip files
-
-## Programmatic use
-
-The package can also be used programmatically. The following code snippets demonstrate
-how to use the package to create the visualisations.
-
-The main function for importing and processing activity files expects a path to a
-directory of unzipped GPX and / or FIT files. If required, the
-[fit2gpx](https://github.com/dodo-saba/fit2gpx) package provides useful tools for
-pre-processing bulk files exported from Strava, e.g. unzipping activity files (see Use
-Case 3: Strava Bulk Export Tools).
-
-```python
-df = process_data("<path to folder with GPX and / or FIT files>")
+3. Create `.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-Some plots use the "activities.csv" file from the Strava bulk export zip. For those
-plots, create an "activities" dataframe using the following function:
-
-```python
-activities = process_activities("<path to activities.csv file>")
+4. Start development server:
+```bash
+npm run dev
 ```
 
-### Plot activities as small multiples
+## Pricing
 
-```python
-plot_facets(df, output_file = 'plot.png')
+- **$2**: Single visualization (no filters)
+- **$3**: Single visualization (with filters)
+- **$9.9**: All visualizations pack (no filters)
+- **$19.9**: Premium pack (5 generations with custom filters)
+
+## Development
+
+### Project Structure
+
+```
+strava_py/
+├── apps/
+│   ├── api/          # FastAPI backend
+│   └── web/            # Next.js frontend
+├── packages/
+│   └── shared/         # Shared TypeScript types
+├── src/
+│   └── stravavis/      # Core visualization library
+└── tests/              # Tests
 ```
 
-### Plot activity map
+### Tech Stack
 
-```python
-plot_map(df, lon_min=None, lon_max= None, lat_min=None, lat_max=None,
-             alpha=0.3, linewidth=0.3, output_file="map.png")
-```
+- **Backend**: FastAPI, SQLAlchemy, Celery, Redis, Stripe
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
+- **Visualization**: matplotlib, plotnine, pandas, gpxpy, fit2gpx
 
-### Plot elevations
+## Deployment
 
-```python
-plot_elevations(df, output_file = 'elevations.png')
-```
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
-### Plot landscape
+Recommended setup:
+- **Frontend**: Vercel
+- **Backend**: Heroku or Railway
+- **Database**: PostgreSQL (Heroku Postgres or Supabase)
+- **Redis**: Heroku Redis or Upstash
 
-```python
-plot_landscape(df, output_file = 'landscape.png')
-```
+## License
 
-### Plot calendar
+MIT
 
-```python
-plot_calendar(activities, year_min=2015, year_max=2017, max_dist=50,
-              fig_height=9, fig_width=15, output_file="calendar.png")
-```
+## Credits
 
-### Plot dumbbell
-
-```python
-plot_dumbbell(activities, year_min=2012, year_max=2015, local_timezone='Australia/Melbourne',
-              fig_height=34, fig_width=34, output_file="dumbbell.png")
-```
+Based on the original [strava_py](https://github.com/marcusvolz/strava_py) by Marcus Volz, enhanced for SaaS deployment.

@@ -27,17 +27,21 @@ def plot_dumbbell(
     fig_width=34,
     output_file="dumbbell.png",
 ):
+    # Normalize column names
+    date_col = "Activity Date" if "Activity Date" in activities.columns else "activity_date"
+    time_col = "Elapsed Time" if "Elapsed Time" in activities.columns else "elapsed_time"
+    
     # Convert activity start date to datetime
     activities = activities.assign(
-        **{"Activity Date": pd.to_datetime(activities["Activity Date"], format="mixed")}
+        **{date_col: pd.to_datetime(activities[date_col], format="mixed", errors="coerce")}
     )
 
     # Convert to local timezone (if given)
     if local_timezone:
         activities = activities.assign(
             **{
-                "Activity Date": (
-                    activities["Activity Date"]
+                date_col: (
+                    activities[date_col]
                     .dt.tz_localize(tz="UTC", nonexistent="NaT", ambiguous="NaT")
                     .dt.tz_convert(local_timezone)
                 )
@@ -46,12 +50,12 @@ def plot_dumbbell(
 
     # Get activity start and end times
     activities = activities.assign(
-        start=activities["Activity Date"],
-        duration=pd.to_timedelta(activities["Elapsed Time"], unit="s"),
+        start=activities[date_col],
+        duration=pd.to_timedelta(activities[time_col], unit="s", errors="coerce"),
     )
     activities = activities.assign(
         end=pd.to_datetime(activities["start"] + activities["duration"]),
-        year=activities["Activity Date"].dt.year,
+        year=activities[date_col].dt.year,
     )
 
     if year_min:

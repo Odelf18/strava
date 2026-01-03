@@ -19,16 +19,20 @@ def plot_calendar(
     # Create a new figure
     plt.figure()
 
+    # Normalize column names
+    date_col = "Activity Date" if "Activity Date" in activities.columns else "activity_date"
+    dist_col = "Distance" if "Distance" in activities.columns else "distance"
+    
     # Process data
     activities = activities.assign(
         **{
-            "Activity Date": pd.to_datetime(
-                activities["Activity Date"], format=ACTIVITY_FORMAT
+            date_col: pd.to_datetime(
+                activities[date_col], format=ACTIVITY_FORMAT, errors="coerce"
             )
         }
     )
-    activities = activities.assign(date=activities["Activity Date"].dt.date)
-    activities = activities.groupby(["date"])["Distance"].sum()
+    activities = activities.assign(date=activities[date_col].dt.date)
+    activities = activities.groupby(["date"])[dist_col].sum()
     activities.index = pd.to_datetime(activities.index)
     activities.clip(0, max_dist, inplace=True)
 
